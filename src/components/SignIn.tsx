@@ -1,10 +1,22 @@
-import { signIn } from "@/auth";
+"use client";
+import { signIn } from "next-auth/react"; // Import from Auth.js
 import Image from "next/image";
 import React from "react";
-import { githubImage, googleImage } from "../app/assets";
-import { useRouter } from 'next/navigation';
+import { googleImage } from "../app/assets"; // Ensure this path is correct
+import { useRouter } from "next/navigation";
 
-const SignIn = () => {
+const SignIn: React.FC = () => {
+  const router = useRouter();
+
+  const handleGoogleSignIn = async (): Promise<void> => {
+    try {
+      await signIn("google"); // Sign in with Google using Auth.js
+      router.push("/chat"); // Redirect to the chat page
+    } catch (error) {
+      console.error("Sign-in error:", error);
+    }
+  };
+
   return (
     <div className="bg-[#2F2F2F] w-96 h-96 flex flex-col gap-5 items-center justify-center rounded-lg">
       <div className="px-10 text-center">
@@ -15,39 +27,14 @@ const SignIn = () => {
         </p>
       </div>
       <div className="flex flex-col gap-3">
-        <form
-          action={async () => {
-            "use server";
-            await signIn("google");
-          }}
+        <button
+          onClick={handleGoogleSignIn}
+          className="border border-white/50 py-2 px-6 rounded-md text-base font-semibold flex items-center gap-1 hover:border-white text-white/80 hover:text-white duration-300 ease-in-out"
+          aria-label="Sign in with Google"
         >
-          <button
-            type="submit"
-            className="border border-white/50 py-2 px-6 rounded-md text-base font-semibold flex items-center gap-1 hover:border-white text-white/80 hover:text-white duration-300 ease-in-out"
-          >
-            <Image src={googleImage} alt="googleImage" className="w-8" /> Signin
-            with Google
-          </button>
-        </form>
-        <form
-          action={async () => {
-            "use server";
-            await signIn("google");
-          }}
-        >
-          <button
-            type="submit"
-            className="border border-white/50 py-2 px-6 rounded-md text-base font-semibold flex items-center gap-1 hover:border-white text-white/80 hover:text-white duration-300 ease-in-out group"
-          >
-            <Image
-              src={githubImage}
-              alt="googleImage"
-              className="w-8 bg-gray-300 rounded-full p-[1px] group-hover:bg-white duration-300"
-            />{" "}
-            Signin with Github
-          </button>
-        </form>
-        
+          <Image src={googleImage} alt="Google logo" className="w-8" />
+          Sign in with Google
+        </button>
       </div>
     </div>
   );
