@@ -1,63 +1,43 @@
-import query from "@/src/lib/queryApi";
 import { NextRequest, NextResponse } from "next/server";
-import admin from "firebase-admin";
-import { Message } from "@/type";
-import { adminDB } from "@/firabaseAdmin";
+import query from "@/src/lib/queryApi";
 
 export const POST = async (req: NextRequest) => {
-  const reqBody = await req.json();
-
-  const { prompt, id, model, session } = await reqBody;
-
   try {
-    if (!prompt) {
-      return NextResponse.json(
-        {
-          message: "Please provide a propmt!",
-        },
-        { status: 400 }
-      );
-    }
+    const reqBody = await req.json();
+    const { prompt, id, model } = reqBody;
 
-    if (!id) {
-      return NextResponse.json(
-        {
-          message: "Please provide a valid chat ID!",
-        },
-        { status: 400 }
-      );
-    }
+    console.log("Received payload:", reqBody);
 
+    // Directly query the model and return the response
     const response = await query(prompt, id, model);
 
-    const message: Message = {
-      text: response || "DedomenaLLM was unable to find an answer for that!",
-      createdAt: admin.firestore.Timestamp.now(),
-      user: {
-        _id: "ChatGPT",
-        name: "Dedomena",
-        avatar:
-          "https://pbs.twimg.com/profile_images/954494635153543169/OIYn9cYM_400x400.jpg",
-      },
-    };
+    if (!response) {
+      return NextResponse.json(
+        {
+          error: "Failed to get a valid response from ChatGPT.",
+          message: "No response was generated due to an error.",
+        },
+        { status: 500 }
+      );
+    }
 
-    await adminDB
-      .collection("users")
-      .doc(session)
-      .collection("chats")
-      .doc(id)
-      .collection("messages")
-      .add(message);
-
+    // Return the response directly without Firestore logic
     return NextResponse.json(
       {
-        answer: message?.text,
-        message: "Dedomena has responded!",
+        answer: response,
+        message: "ChatGPT has responded.",
         success: true,
       },
       { status: 200 }
     );
   } catch (error) {
-    return NextResponse.json({ error: error }, { status: 500 });
+    console.error("Unexpected error:", error);
+    return NextResponse.json(
+      {
+        error: "An unexpected error occurred.",
+        message: error.message || "Unknown error.",
+      },
+      { status: 500 }
+    );
   }
 };

@@ -4,6 +4,7 @@ import Image from "next/image";
 import React from "react";
 import { googleImage } from "../app/assets"; // Ensure this path is correct
 import { useRouter } from "next/navigation";
+import { IoClose } from "react-icons/io5"; // Import a close icon
 
 const SignIn: React.FC = () => {
   const router = useRouter();
@@ -17,8 +18,21 @@ const SignIn: React.FC = () => {
     }
   };
 
+  const handleClose = (): void => {
+    router.push("/"); // Redirect to the homepage or another route
+  };
+
   return (
-    <div className="bg-[#2F2F2F] w-96 h-96 flex flex-col gap-5 items-center justify-center rounded-lg">
+    <div className="relative bg-[#2F2F2F] w-96 h-96 flex flex-col gap-5 items-center justify-center rounded-lg">
+      {/* Close button */}
+      <button
+        onClick={handleClose}
+        className="absolute top-3 right-3 text-white/80 hover:text-white p-2 rounded-full hover:bg-white/10 duration-200 ease-in-out"
+        aria-label="Close sign-in page"
+      >
+        <IoClose className="text-2xl" />
+      </button>
+
       <div className="px-10 text-center">
         <p className="text-3xl font-bold tracking-wide">Welcome back</p>
         <p className="text-base tracking-wide mt-2 font-medium">

@@ -17,21 +17,22 @@ const ChatInput = ({ id }: { id?: string }) => {
   const [prompt, setPrompt] = useState("");
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
+  const [response, setResponse] = useState(""); // State to hold the response from the backend
 
   const { data: model } = useSWR("model", {
     fallbackData: "gpt-4-turbo",
   });
 
-  // const model = "gpt-4-turbo";
-
-  const userEmail = session?.user
-    ? (session?.user?.email as string)
-    : "unknown";
+  const userEmail = session?.user ? (session?.user?.email as string) : "unknown";
   const userName = session?.user ? (session?.user?.email as string) : "unknown";
 
   const sendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!prompt) return;
+
+    if (!prompt.trim()) {
+      toast.error("Prompt cannot be empty.");
+      return;
+    }
 
     const input = prompt.trim();
     const message: Message = {
@@ -41,7 +42,7 @@ const ChatInput = ({ id }: { id?: string }) => {
         _id: userEmail,
         name: userName,
         avatar:
-          (session?.user?.image as string) ||
+          session?.user?.image ||
           "https://avatarfiles.alphacoders.com/254/254096.png",
       },
     };
@@ -50,7 +51,7 @@ const ChatInput = ({ id }: { id?: string }) => {
       setLoading(true);
       let chatDocumentId = chatId;
 
-      // If no chat ID is provided, create a new chat and get the ID
+      // Create a new chat if no ID is provided
       if (!chatId) {
         const docRef = await addDoc(
           collection(db, "users", userEmail, "chats"),
@@ -63,7 +64,7 @@ const ChatInput = ({ id }: { id?: string }) => {
         router.push(`/chat/${chatDocumentId}`);
       }
 
-      // Add the message to the new or existing chat
+      // Add the message to Firestore
       await addDoc(
         collection(
           db,
@@ -77,34 +78,38 @@ const ChatInput = ({ id }: { id?: string }) => {
       );
       setPrompt("");
 
-      // Toast notification to say loading
-      const notification = toast.loading("DedomenaLLM is thinking...");
+      // Build and validate the payload
+      const payload = {
+        prompt: input,
+        id: chatDocumentId,
+        model: model || "gpt-4-turbo",
+        session: userEmail,
+      };
+
+      console.log("Sending payload:", payload);
+
+      if (!payload.prompt || !payload.id || !payload.model || !payload.session) {
+        throw new Error("Invalid payload structure");
+      }
 
       // Send request to backend API
-      await fetch("/api/askchat", {
+      const response = await fetch("/api/askchat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          prompt: input,
-          id: chatDocumentId,
-          model,
-          session: userEmail,
-        }),
-      }).then(async (res) => {
-        const data = await res.json();
-
-        if (data?.success) {
-          toast.success(data?.message, {
-            id: notification,
-          });
-        } else {
-          toast.error(data?.message, {
-            id: notification,
-          });
-        }
+        body: JSON.stringify(payload),
       });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data?.message || "Response received.");
+        setResponse(data?.answer || "No answer received."); // Set the response from backend
+      } else {
+        console.error("API Error:", data);
+        toast.error(data?.message || "Failed to process request.");
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Something went wrong. Please try again.");
@@ -124,7 +129,7 @@ const ChatInput = ({ id }: { id?: string }) => {
           type="text"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Message Dedomena"
+          placeholder="Message ChatGPT"
           className="bg-transparent text-primary-foreground font-medium placeholder:text-primary-foreground/50 px-3 outline-none w-full"
           disabled={loading}
         />
@@ -139,9 +144,16 @@ const ChatInput = ({ id }: { id?: string }) => {
 
       {id && (
         <p className="text-xs mt-2 font-medium tracking-wide">
-          LLM can make mistakes, double check critical information.
+          ChatGPT can make mistakes. Check important info.
         </p>
       )}
+
+      {response && (
+        <div className="mt-4 text-lg font-semibold">
+          <p>{response}</p> {/* Display response directly */}
+        </div>
+      )}
+
       <div className="w-full md:hidden mt-2">
         <ModelSelection />
       </div>
